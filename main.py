@@ -332,6 +332,11 @@ class ManageServer:
     ****** Google Drive Functions ******
     """
     def download_last_save(self):
+        """
+        Call functions which will download .zip file with last save, remove current last save from your device and unzip
+        file with new one. Then it will remove all temporary files.
+        :return:
+        """
         self.log_file_message("Would you like to download last save from Google Drive:")
         while True:
             decision = input("(Y/N)")
@@ -350,7 +355,11 @@ class ManageServer:
         # Call the Drive v3 API
         items = self.drive_list_files(service)
         self.translate_files(items)
-        sys.exit()
+        self.find_save_and_download()
+        self.remove_directories_and_files(DIRECTORIES_TO_ZIP)
+        self.unzip_folder(f"{SERVER_DIR}/{SAVE_FILE_NAME}", SERVER_DIR)
+        self.remove_directories_and_files([f"{SERVER_DIR}/{SAVE_FILE_NAME}"])
+        self.log_file_message("Current server was updated with the latest save.")
 
     @staticmethod
     def get_gdrive_service(scopes: list):
@@ -444,6 +453,67 @@ class ManageServer:
                 rows.append((id, name, parents, size, mime_type, modified_time))
             self.drive_files_list = rows
 
+    def find_save_and_download(self):
+        """
+        Finds the newest .zip save file and downloads it to server location.
+        :return:
+        """
+        self.log_file_message("Searching from newest save file.")
+        youngest_folder_id = None
+        youngest_folder_name = ""
+        youngest_folder_date = ""
+        youngest_folder_date_time = datetime.min
+        worlds = []
+        for item in self.drive_files_list:
+            if item[4] == "application/x-zip-compressed":
+                if item[1] == SAVE_FILE_NAME:
+                    worlds.append(item)
+                    self.log_file_message(f"Found folder with name: {item[1]} and date {item[5]}.")
+                    # Parse date-time string into datetime object
+                    item_datetime = datetime.strptime(item[5], "%Y-%m-%dT%H:%M:%S.%fZ")
+                    if item_datetime > youngest_folder_date_time:
+                        youngest_folder_id = item[0]
+                        youngest_folder_name = item[1]
+                        youngest_folder_date = item[5]
+                        youngest_folder_date_time = item_datetime
+
+        if youngest_folder_id:
+            self.log_file_message(f"Downloading last save: {youngest_folder_name}, from: {youngest_folder_date}.")
+            self.download_file(youngest_folder_id, youngest_folder_name, SERVER_DIR)
+        else:
+            self.log_file_message(f"No save found. Stop app.")
+            sys.exit()
+
+    def download_file(self, file_id, file_name, output_dir):
+        """
+        Downloads a file from Google Drive to a specific directory.
+        :param file_id: ID of the file to download.
+        :param file_name: Name to give the downloaded file.
+        :param output_dir: Directory to save the downloaded file.
+        """
+        service = self.get_gdrive_service(SCOPES)
+        request = service.files().get_media(fileId=file_id)
+        fh = io.FileIO(os.path.join(output_dir, file_name), 'wb')
+        downloader = MediaIoBaseDownload(fh, request)
+
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            self.log_file_message(f"Download {int(status.progress() * 100)}%.")
+
+        self.log_file_message(f"File '{file_name}' downloaded successfully to '{output_dir}'.")
+
+    @staticmethod
+    def unzip_folder(zip_file: str, destination: str):
+        """
+        Unzips downloaded save to the specific directory.
+        :param zip_file: Directory to file which should be unzipped.
+        :param destination: Directory where this file should be unzipped.
+        :return:
+        """
+        with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+            zip_ref.extractall(destination)
+
     def save_server_to_drive(self):
         """
         Calls functions which removes the eldest world folder from drive and saves the current one.
@@ -459,6 +529,7 @@ class ManageServer:
         self.log_file_message(f"Sending world folder to drive.")
         self.zip_directories(DIRECTORIES_TO_ZIP, SAVE_FILE_NAME)
         self.upload_zip_file(SAVE_FILE_NAME, SAVE_FOLDER_NAME)
+        self.remove_directories_and_files([f"{CURRENT_DIR}/{SAVE_FILE_NAME}"])
 
     def remove_eldest_folder(self):
         """
@@ -494,8 +565,14 @@ class ManageServer:
             self.log_file_message("No folders found.")
 
     @staticmethod
-    def zip_directories(directory_list, output_zip):
-        with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    def zip_directories(directory_list: list, output_zip_name: str):
+        """
+        Zips directories from given list to one file in working directory.
+        :param directory_list: List of directories which should be zipped.
+        :param output_zip_name: Name of output zip.
+        :return: 
+        """
+        with zipfile.ZipFile(output_zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for item in directory_list:
                 if os.path.isfile(item):
                     zipf.write(item, os.path.basename(item))
@@ -528,7 +605,22 @@ class ManageServer:
         }
         media = MediaFileUpload(zip_file_path, resumable=True)
         file = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-        self.log_file_message("Zip file uploaded successfully, id:", file.get("id"))
+        self.log_file_message(f"Zip file uploaded successfully, id: {file.get('id')}")
+
+    def remove_directories_and_files(self, directory_list):
+        """
+        Removes directories and files specified in the directory list.
+        :param directory_list: List of directories and files to remove.
+        """
+        for item in directory_list:
+            if os.path.isfile(item):
+                os.remove(item)
+                self.log_file_message(f"File '{item}' removed successfully.")
+            elif os.path.isdir(item):
+                shutil.rmtree(item, ignore_errors=True)
+                self.log_file_message(f"Directory '{item}' and its contents removed successfully.")
+            else:
+                self.log_file_message(f"Path '{item}' does not exist.")
 
     def upload_files_from_directory(self, directory_path, parent_folder_id=None):
         """
