@@ -172,6 +172,7 @@ class ManageServer:
         self.log_file_message("Recording server console...")
         for line in iter(self.server_process.stdout.readline, ""):
             line = line.decode('utf-8', errors='ignore')
+            print(line[:-2])
             if match := re.search(SERVER_STARTED_RE, line):
                 result = match[1]
                 self.log_file_message(f"Server started in: {result}.")
@@ -665,7 +666,7 @@ class ManageServer:
                 sub_folder_id = sub_folder_file.get("id")
                 self.log_file_message(f"Sub-folder '{filename}' created successfully. ID: {sub_folder_id}.")
 
-                # Recursively call the function for the subdirectory, using the new subfolder as the parent folder
+                # Recursively call the function for the subdirectory, using the new sub-folder as the parent folder
                 self.upload_files_from_directory(filepath, sub_folder_id)
 
 

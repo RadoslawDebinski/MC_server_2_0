@@ -11,11 +11,14 @@ LOGS_DIR = f"{CURRENT_DIR}/logs"
 PYTHON_DIR = f"{CURRENT_DIR}/../../python/python"
 SAVE_DIR = f"{SERVER_DIR}/world"
 # Server init configuration
-RUN_SERVER_COMMAND = [f"{JAVA_DIR}/java", "-jar",
-                      "-Xmx5G",  # 5GB RAM for running server
-                      "-Xms1G",  # 1GB RAM as initial star-up memory
-                      f"{SERVER_DIR}/server.jar",  # Server instance to be run
-                      "--nogui"]  # Unable GUI / speed up
+# Run command vanilla
+# RUN_SERVER_COMMAND = [f"{JAVA_DIR}/java", "-jar",
+#                       "-Xmx5G",  # 5GB RAM for running server
+#                       "-Xms1G",  # 1GB RAM as initial star-up memory
+#                       f"{SERVER_DIR}/server.jar",  # Server instance to be run
+#                       "--nogui"]  # Unable GUI / speed up
+# Run command mods
+RUN_SERVER_COMMAND = [f"{SERVER_DIR}/run.bat"]  # Unable GUI / speed up
 
 # Create and configure logger / log file
 NOT_FILE_NAME_SIGNS = ["-", ":", ".", " "]
@@ -23,8 +26,10 @@ LOG_NAME = f"logs/{''.join([elem if elem not in NOT_FILE_NAME_SIGNS else '_' for
 logging.basicConfig(filename=LOG_NAME,
                     format='%(message)s',
                     filemode='w')
-# Regex patterns
-SERVER_STARTED_RE = r'\[Server thread/INFO\]: Done \((.*?)\)! For help, type "help"'
+# Regex pattern vanilla
+# SERVER_STARTED_RE = r'\[Server thread/INFO\]: Done \((.*?)\)! For help, type "help"'
+# Regex pattern mods
+SERVER_STARTED_RE = r'\[minecraft/DedicatedServer]: Done \((.*?)\)! For help, type "help"'
 TCP_RE = r'url=tcp://(.*?)\n'
 SERVER_STOPPED_PATTERN = "ThreadedAnvilChunkStorage: All dimensions are saved"
 # Ngrok temp log file name
