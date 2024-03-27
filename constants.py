@@ -4,19 +4,22 @@ import logging
 
 # Used directories
 CURRENT_DIR = os.getcwd()
-JAVA_DIR = f"{CURRENT_DIR}/../../java/jdk-21.0.2/bin"
+# https://www.oracle.com/java/technologies/downloads/
+JAVA_DIR = f"{CURRENT_DIR}/../../java/jdk-17.0.10/bin"
 SERVER_DIR = f"{CURRENT_DIR}/../../server"
 NGROK_DIR = f"{CURRENT_DIR}/../../ngrok"
 LOGS_DIR = f"{CURRENT_DIR}/logs"
 PYTHON_DIR = f"{CURRENT_DIR}/../../python/python"
 SAVE_DIR = f"{SERVER_DIR}/world"
 # Server init configuration
-# Run command vanilla
+
+# Run command for vanilla
 # RUN_SERVER_COMMAND = [f"{JAVA_DIR}/java", "-jar",
 #                       "-Xmx5G",  # 5GB RAM for running server
 #                       "-Xms1G",  # 1GB RAM as initial star-up memory
 #                       f"{SERVER_DIR}/server.jar",  # Server instance to be run
 #                       "--nogui"]  # Unable GUI / speed up
+
 # Run command mods
 RUN_SERVER_COMMAND = [f"{SERVER_DIR}/run.bat"]  # Unable GUI / speed up
 
@@ -28,6 +31,7 @@ logging.basicConfig(filename=LOG_NAME,
                     filemode='w')
 # Regex pattern vanilla
 # SERVER_STARTED_RE = r'\[Server thread/INFO\]: Done \((.*?)\)! For help, type "help"'
+
 # Regex pattern mods
 SERVER_STARTED_RE = r'\[minecraft/DedicatedServer]: Done \((.*?)\)! For help, type "help"'
 TCP_RE = r'url=tcp://(.*?)\n'
