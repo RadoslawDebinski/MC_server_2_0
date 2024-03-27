@@ -239,9 +239,8 @@ class ManageServer:
         for line in iter(self.ssh_process.stdout.readline, ""):
             line = line.decode('utf-8', errors='ignore')
             print(line)
-            if match := re.search(SSH_STARTED_RE, line):
-                result = match[1]
-                self.extracted_address = result
+            if re.search(SSH_STARTED_RE, line):
+                self.extracted_address = f"{socket.gethostbyname('serveo.net')}:{self.free_port}"
                 self.tcp_address_found = True
                 break
             elif int(time.time() - ssh_start_time) > SSH_START_TIMEOUT_S:
