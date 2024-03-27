@@ -199,7 +199,7 @@ class ManageServer:
         self.log_file_message("Recording server console...")
         for line in iter(self.server_process.stdout.readline, ""):
             line = line.decode('utf-8', errors='ignore')
-            print(line[:-2])
+            print(line[:-1])
             if match := re.search(SERVER_STARTED_RE, line):
                 result = match[1]
                 self.log_file_message(f"Server started in: {result}.")
@@ -220,7 +220,7 @@ class ManageServer:
         :return:
         """
         for line in iter(self.server_process.stdout.readline, b''):
-            line_text = line.decode('utf-8')[:-2]
+            line_text = line.decode('utf-8')[:-1]
             print(line_text)
             if line_text.endswith(SERVER_STOPPED_PATTERN):
                 self.server_stopped = True
@@ -232,7 +232,8 @@ class ManageServer:
         """
         # https://serveo.net/
         # Clearing the previous log
-        run_ssh_command = f"ssh -R {self.free_port}:localhost:{self.free_port} serveo.net"
+        # run_ssh_command = f"sudo ssh -R {self.free_port}:localhost:{self.free_port} serveo.net"
+        run_ssh_command = ["sudo", "ssh", "-R", f"{self.free_port}:localhost:{self.free_port}", "serveo.net"]
         self.log_file_message("Staring serveo subprocess.")
         self.ssh_process = subprocess.Popen(run_ssh_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         ssh_start_time = time.time()
@@ -254,11 +255,11 @@ class ManageServer:
         """
         # https://www.geeksforgeeks.org/discord-bot-in-python/
         self.log_file_message("Starting discord bot subprocess.")
-        run_bot_command = [PYTHON_DIR, "discord_bot.py", f"{self.extracted_address}"]
+        run_bot_command = ["python3", "discord_bot.py", f"{self.extracted_address}"]
         self.discord_bot_process = subprocess.Popen(run_bot_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         for line in iter(self.discord_bot_process.stdout.readline, b''):
             print(line)
-            line_text = line.decode('utf-8')[:-2]
+            line_text = line.decode('utf-8')[:-1]
             self.log_file_message(line_text, sent_by_bot=True)
 
     def console_interface(self):
