@@ -1,0 +1,7 @@
+__pycache__/*
+*.log
+*.pyc
+logs/*
+credentials.json
+token.pickle
+sensitive_data.py
