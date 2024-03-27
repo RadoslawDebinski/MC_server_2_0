@@ -4,6 +4,7 @@
 import errno
 import io
 import re
+import signal
 import shutil
 import socket
 import subprocess
@@ -288,8 +289,8 @@ class ManageServer:
         :return:
         """
         # Disconnect players
-        self.log_file_message("Stopping ngrok subprocess.")
-        self.ngrok_process.terminate()
+        self.log_file_message("Stopping ssh subprocess.")
+        os.system(f"sudo kill {self.ssh_process.pid}")
         # Safely stop server
         self.log_file_message("Stopping server subprocess.")
         self.send_server_command("/stop")
@@ -550,7 +551,7 @@ class ManageServer:
         :return:
         """
         self.log_file_message("Removing eldest world folder from the drive.")
-        self.drive_files_list.sort(key=lambda x: datetime.fromisoformat(x[-1]), reverse=True)
+        self.drive_files_list.sort(key=lambda x: datetime.fromisoformat(x[-1].replace("Z","")), reverse=True)
         eldest_folder_id = None
         eldest_folder_name = ""
         eldest_folder_date = ""

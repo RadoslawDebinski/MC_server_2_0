@@ -31,7 +31,10 @@ def wait_for_user_input():
     :return:
     """
     while True:
-        user_input = input()
+        try:
+            user_input = input()
+        except EOFError:
+            break
         channel_name = USERS_CHANNEL_NAME
         if user_input.startswith(USERS_CHANNEL_NAME):
             user_input = user_input.replace(USERS_CHANNEL_NAME, "")
