@@ -21,7 +21,7 @@ SAVE_DIR = f"{SERVER_DIR}/world"
 #                       "--nogui"]  # Unable GUI / speed up
 
 # Run command mods
-RUN_SERVER_COMMAND = [f"{SERVER_DIR}/run.bat"]
+RUN_SERVER_COMMAND = [f"{SERVER_DIR}/run.sh"]
 
 # Create and configure logger / log file
 NOT_FILE_NAME_SIGNS = ["-", ":", ".", " "]
