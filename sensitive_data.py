@@ -1,2 +1,0 @@
-# Bots stuff
-BOT_TOKEN = "MTIxNzU0NDMxNzYzMjExODg4Nw.GN6SNV.Y06I8-BmJNT3pLa3k4FvQMgwcu2r0sS9baNLl8"
