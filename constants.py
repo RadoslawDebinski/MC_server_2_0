@@ -21,7 +21,7 @@ SAVE_DIR = f"{SERVER_DIR}/world"
 #                       "--nogui"]  # Unable GUI / speed up
 
 # Run command mods
-RUN_SERVER_COMMAND = [f"{SERVER_DIR}/run.bat"]  # Unable GUI / speed up
+RUN_SERVER_COMMAND = [f"{SERVER_DIR}/run.sh"]
 
 # Create and configure logger / log file
 NOT_FILE_NAME_SIGNS = ["-", ":", ".", " "]
@@ -35,14 +35,13 @@ logging.basicConfig(filename=LOG_NAME,
 
 # Regex pattern mods
 SERVER_STARTED_RE = r'\[minecraft/DedicatedServer]: Done \((.*?)\)! For help, type "help"'
+SSH_STARTED_RE = r'\b[\w.-]+:\d+\b'
 TCP_RE = r'url=tcp://(.*?)\n'
 SERVER_STOPPED_PATTERN = "ThreadedAnvilChunkStorage: All dimensions are saved"
-# Ngrok temp log file name
-OUT_NGROK_FILE = "output.log"
 # Timings
 SERVER_STATUS_CHECK_PERIOD_S = 60
 SERVER_START_TIMEOUT_S = 5 * 60
-NGROK_STABILIZATION_TIME_S = 3
+SSH_START_TIMEOUT_S = 10
 # Google drive scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
           'https://www.googleapis.com/auth/drive.file']

@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+import datetime
 # Google stuff
 import pickle
 import zipfile
@@ -30,7 +31,7 @@ class ManageServer:
         """
         # Processes
         self.server_process = None
-        self.ngrok_process = None
+        self.ssh_process = None
         self.discord_bot_process = None
         # Main threads
         self.server_listener_thread = None
@@ -90,11 +91,12 @@ class ManageServer:
         console interface.
         :return:
         """
+        self.check_credentials()
         self.download_last_save()
         self.change_config_port()
         self.run_server()
         if self.server_started:
-            self.connect_ngrok()
+            self.connect_serveo()
             if self.tcp_address_found:
                 self.log_file_message("Starting discord bot thread.")
                 self.discord_bot_thread = threading.Thread(target=self.run_discord_bot)
@@ -108,6 +110,31 @@ class ManageServer:
         else:
             self.log_file_message(f"Server starting time out exceeded: "
                                   f"{SERVER_START_TIMEOUT_S} limit.")
+
+    def check_credentials(self):
+        """
+        Informs user about current status of credentials.json used by Google Drive service. If modify date of this file
+        is not within 1 week from the current date gives a warning.
+        :return:
+        """
+        credentials_name = "credentials.json"
+        if os.path.exists(credentials_name):
+            modification_time = os.path.getmtime(credentials_name)
+            modification_date = datetime.fromtimestamp(modification_time)
+            self.log_file_message(f"Modify date of {credentials_name} is {modification_date}.")
+            current_date = datetime.now()
+            # Calculate the difference between current date and modification date
+            difference = current_date - modification_date
+            # Check if the difference is not bigger than 7 days
+            if difference.days <= 7:
+                self.log_file_message(f"The modification date of '{credentials_name}' "
+                                      f"is within 1 week from the current date.")
+            else:
+                self.log_file_message(f"!!!WARNING The modification date of '{credentials_name}' "
+                                      f"is not within 1 week from the current date!!!")
+        else:
+            self.log_file_message(f"No {credentials_name} file found.")
+            raise Exception("Stopping further execution.")
 
     def change_config_port(self):
         """
@@ -198,44 +225,28 @@ class ManageServer:
             if line_text.endswith(SERVER_STOPPED_PATTERN):
                 self.server_stopped = True
 
-    def connect_ngrok(self):
+    def connect_serveo(self):
         """
-        Creates temporary ngrok log file and run its subprocess.
+        Runs serveo ssh command and saves new ip.
         :return:
         """
-        # https://www.sitepoint.com/use-ngrok-test-local-site/
-        # https://www.endtoend.ai/tutorial/ngrok-ssh-forwarding/
-        os.chdir(NGROK_DIR)
+        # https://serveo.net/
         # Clearing the previous log
-        self.log_file_message("Clearing ngrok temporary log file.")
-        open(OUT_NGROK_FILE, 'w').close()
-        with open(OUT_NGROK_FILE, "r") as output_file:
-            run_ngrok_command = ["ngrok", "tcp", f"{self.free_port}", "--log", f"{OUT_NGROK_FILE}"]
-            self.log_file_message("Staring ngrok subprocess.")
-            self.ngrok_process = subprocess.Popen(run_ngrok_command, stdout=subprocess.DEVNULL,
-                                                  stderr=subprocess.DEVNULL)
-            self.get_tcp_address(output_file)
-            output_file.close()
-        os.chdir(CURRENT_DIR)
-
-    def get_tcp_address(self, output_file: io.TextIOWrapper) -> None:
-        """
-        Gives few second for ngrok to start connection.
-        Checks its output temporary log file and if found saves it to variable and changes tcp_address_found flag.
-        :param output_file:
-        :return:
-        """
-        # Give ngrok some time for stabilization
-        time.sleep(NGROK_STABILIZATION_TIME_S)
-        log_content = "".join(output_file.readlines())
-        # Search for the TCP_RE pattern in the logs
-        if match := re.search(TCP_RE, log_content):
-            result = match[1]
-            self.log_file_message(f"Extracted server tcp address: {result}")
-            self.extracted_address = result
-            self.tcp_address_found = True
-        else:
-            self.log_file_message("Server tcp address not found.")
+        run_ssh_command = f"ssh -R {self.free_port}:localhost:{self.free_port} serveo.net"
+        self.log_file_message("Staring serveo subprocess.")
+        self.ssh_process = subprocess.Popen(run_ssh_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        ssh_start_time = time.time()
+        for line in iter(self.ssh_process.stdout.readline, ""):
+            line = line.decode('utf-8', errors='ignore')
+            print(line)
+            if match := re.search(SSH_STARTED_RE, line):
+                result = match[1]
+                self.extracted_address = result
+                self.tcp_address_found = True
+                break
+            elif int(time.time() - ssh_start_time) > SSH_START_TIMEOUT_S:
+                self.log_file_message(f"SSH with serveo starting time out exceeded: "
+                                      f"{SERVER_START_TIMEOUT_S} limit.")
 
     def run_discord_bot(self):
         """
@@ -332,6 +343,7 @@ class ManageServer:
     """
     ****** Google Drive Functions ******
     """
+
     def download_last_save(self):
         """
         Call functions which will download .zip file with last save, remove current last save from your device and unzip
