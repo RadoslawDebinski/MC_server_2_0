@@ -25,6 +25,7 @@ RUN_SERVER_COMMAND = [f"{SERVER_DIR}/run.bat"]  # Unable GUI / speed up
 
 # Create and configure logger / log file
 NOT_FILE_NAME_SIGNS = ["-", ":", ".", " "]
+os.makedirs("logs", exist_ok=True)
 LOG_NAME = f"logs/{''.join([elem if elem not in NOT_FILE_NAME_SIGNS else '_' for elem in str(datetime.now())])}.log"
 logging.basicConfig(filename=LOG_NAME,
                     format='%(message)s',
