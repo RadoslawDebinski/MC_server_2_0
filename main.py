@@ -1,6 +1,7 @@
 # Used python version
 # https://www.python.org/downloads/release/python-3118/
 # My libraries
+import argparse
 import errno
 import io
 import re
@@ -10,6 +11,7 @@ import subprocess
 import sys
 import threading
 import time
+import datetime
 # Google stuff
 import pickle
 import zipfile
@@ -23,10 +25,11 @@ from constants import *
 
 
 class ManageServer:
-    def __init__(self, standard_process: bool = True):
+    def __init__(self, standard_process: bool = True, reset_flag: bool = False):
         """
         Initializes all class variables, checks for free port for server on device, starts app.
         :param standard_process: Flag which indicated default processing strategy execution.
+        :param reset_flag: Indicates that app is during reset and input from user should not be proceeded.
         """
         # Processes
         self.server_process = None
@@ -43,6 +46,7 @@ class ManageServer:
         self.server_started = False
         self.tcp_address_found = False
         self.server_stopped = False
+        self.reset_app = False
         # Port variable
         self.free_port = None
         self.log_file_message("Searching for free port.")
@@ -53,7 +57,8 @@ class ManageServer:
         self.extracted_address = ""
 
         if self.standard_process:
-            self.run_app()
+            standard_start = not reset_flag
+            self.run_app(standard_start)
 
     def find_free_port(self) -> None:
         """
@@ -84,13 +89,15 @@ class ManageServer:
             self.log_file_message("Free port not found.")
             self.standard_process = False
 
-    def run_app(self):
+    def run_app(self, start_flag: bool = True):
         """
         Calls functions which: changes port in server's properties, starts server, starts ngrok connection, activates
         console interface.
+        :param start_flag: Indicates that app is during standard start, not reboot.
         :return:
         """
-        self.download_last_save()
+        self.check_credentials()
+        self.download_last_save(start_flag)
         self.change_config_port()
         self.run_server()
         if self.server_started:
@@ -99,15 +106,45 @@ class ManageServer:
                 self.log_file_message("Starting discord bot thread.")
                 self.discord_bot_thread = threading.Thread(target=self.run_discord_bot)
                 self.discord_bot_thread.start()
+                # Run while true console
                 while True:
                     self.console_interface()
                     if self.server_stopped:
+                        if self.reset_app:
+                            run_main_command = ["gnome-terminal", "--", "python3", "main.py", "--reset"]
+                            subprocess.Popen(run_main_command)
                         # wait a moment to make output visible
                         time.sleep(5)
                         break
+
         else:
             self.log_file_message(f"Server starting time out exceeded: "
                                   f"{SERVER_START_TIMEOUT_S} limit.")
+
+    def check_credentials(self):
+        """
+        Informs user about current status of credentials.json used by Google Drive service. If modify date of this file
+        is not within 1 week from the current date gives a warning.
+        :return:
+        """
+        credentials_name = "credentials.json"
+        if os.path.exists(credentials_name):
+            modification_time = os.path.getmtime(credentials_name)
+            modification_date = datetime.fromtimestamp(modification_time)
+            self.log_file_message(f"Modify date of {credentials_name} is {modification_date}.")
+            current_date = datetime.now()
+            # Calculate the difference between current date and modification date
+            difference = current_date - modification_date
+            # Check if the difference is not bigger than 7 days
+            if difference.days <= 7:
+                self.log_file_message(f"The modification date of '{credentials_name}' "
+                                      f"is within 1 week from the current date.")
+            else:
+                self.log_file_message(f"!!!WARNING The modification date of '{credentials_name}' "
+                                      f"is not within 1 week from the current date!!!")
+        else:
+            self.log_file_message(f"No {credentials_name} file found.")
+            raise Exception("Stopping further execution.")
 
     def change_config_port(self):
         """
@@ -261,6 +298,9 @@ class ManageServer:
             self.stop_app()
         elif command.lower() == "save":
             self.stop_app(update_saves=True)
+        elif command.lower() == "reset":
+            self.reset_app = True
+            self.stop_app(update_saves=True)
         elif command.startswith("/s "):
             self.send_server_command(command[3:])
         elif command.startswith("/b "):
@@ -332,14 +372,16 @@ class ManageServer:
     """
     ****** Google Drive Functions ******
     """
-    def download_last_save(self):
+
+    def download_last_save(self, user_flag: bool = True):
         """
         Call functions which will download .zip file with last save, remove current last save from your device and unzip
         file with new one. Then it will remove all temporary files.
+        :param user_flag: Flag which indicates that user input is needed.
         :return:
         """
         self.log_file_message("Would you like to download last save from Google Drive:")
-        while True:
+        while user_flag:
             decision = input("(Y/N)")
             if decision.lower().startswith("n"):
                 self.log_file_message("Last save will not be downloaded.")
@@ -538,7 +580,7 @@ class ManageServer:
         :return:
         """
         self.log_file_message("Removing eldest world folder from the drive.")
-        self.drive_files_list.sort(key=lambda x: datetime.fromisoformat(x[-1]), reverse=True)
+        self.drive_files_list.sort(key=lambda x: datetime.fromisoformat(x[-1].replace("Z", "")), reverse=True)
         eldest_folder_id = None
         eldest_folder_name = ""
         eldest_folder_date = ""
@@ -571,7 +613,7 @@ class ManageServer:
         Zips directories from given list to one file in working directory.
         :param directory_list: List of directories which should be zipped.
         :param output_zip_name: Name of output zip.
-        :return: 
+        :return:
         """
         with zipfile.ZipFile(output_zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for item in directory_list:
@@ -672,4 +714,15 @@ class ManageServer:
 
 if __name__ == '__main__':
     # Default server start.
-    ManageServer()
+    reset_input = bool(sys.argv[1])
+
+    # Create argument parser
+    parser = argparse.ArgumentParser(description="This is main script of server control.")
+
+    # Add boolean flag argument
+    parser.add_argument("--reset", action="store_true", default=False, help="Set this flag to reset app.")
+
+    # Parse the arguments
+    args = parser.parse_args()
+
+    ManageServer(reset_flag=args.reset)
