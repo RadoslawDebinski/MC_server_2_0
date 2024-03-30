@@ -244,7 +244,7 @@ class ManageServer:
         # https://serveo.net/
         # Clearing the previous log
         # run_ssh_command = f"sudo ssh -R {self.free_port}:localhost:{self.free_port} serveo.net"
-        run_ssh_command = ["sudo", "ssh", "-R", f"{self.free_port}:localhost:{self.free_port}", "serveo.net"]
+        run_ssh_command = ["ssh", "-R", f"{self.free_port}:localhost:{self.free_port}", "serveo.net"]
         self.log_file_message("Staring serveo subprocess.")
         self.ssh_process = subprocess.Popen(run_ssh_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         ssh_start_time = time.time()
