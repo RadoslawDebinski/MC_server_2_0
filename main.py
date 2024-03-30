@@ -112,9 +112,8 @@ class ManageServer:
                     self.console_interface()
                     if self.server_stopped:
                         if self.reset_app:
-                            os.system("./restart.sh")
-                            # run_main_command = ["./restart.sh"]
-                            # subprocess.run(run_main_command)
+                            run_main_command = ["./restart.sh"]
+                            subprocess.call(run_main_command, shell=True)
                         # wait a moment to make output visible
                         time.sleep(5)
                         break
