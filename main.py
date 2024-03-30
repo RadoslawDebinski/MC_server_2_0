@@ -466,7 +466,7 @@ class ManageServer:
         youngest_folder_date_time = datetime.min
         worlds = []
         for item in self.drive_files_list:
-            if item[4] == "application/x-zip-compressed":
+            if item[4] == "application/zip":
                 if item[1] == SAVE_FILE_NAME:
                     worlds.append(item)
                     self.log_file_message(f"Found folder with name: {item[1]} and date {item[5]}.")

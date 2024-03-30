@@ -11,6 +11,7 @@ NGROK_DIR = f"{CURRENT_DIR}/../../ngrok"
 LOGS_DIR = f"{CURRENT_DIR}/logs"
 PYTHON_DIR = f"{CURRENT_DIR}/../../python/python"
 SAVE_DIR = f"{SERVER_DIR}/world"
+CONFIG_DIR = f"{SERVER_DIR}/config"
 # Server init configuration
 
 # Run command for vanilla
@@ -58,7 +59,8 @@ HELP_MESSAGE = "\n\n" \
 ADMIN_CHANNEL_NAME = "admin_control"
 USERS_CHANNEL_NAME = "bot_chatting"
 # Upload and download variables
-DIRECTORIES_TO_ZIP = [SAVE_DIR, f"{SERVER_DIR}/whitelist.json", f"{SERVER_DIR}/banned-players.json"]
+DIRECTORIES_TO_ZIP = [SAVE_DIR, CONFIG_DIR, f"{SERVER_DIR}/whitelist.json", f"{SERVER_DIR}/banned-players.json",
+                      f"{SERVER_DIR}/server.properties"]
 SAVE_FILE_NAME = "world_save.zip"
 SAVE_FOLDER_NAME = "world"
 
