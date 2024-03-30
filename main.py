@@ -112,8 +112,9 @@ class ManageServer:
                     self.console_interface()
                     if self.server_stopped:
                         if self.reset_app:
-                            run_main_command = ["gnome-terminal", "--", "python3", "main.py", "--reset"]
-                            subprocess.Popen(run_main_command)
+                            os.system("./restart.sh")
+                            # run_main_command = ["./restart.sh"]
+                            # subprocess.run(run_main_command)
                         # wait a moment to make output visible
                         time.sleep(5)
                         break
@@ -698,9 +699,6 @@ class ManageServer:
 
 
 if __name__ == '__main__':
-    # Default server start.
-    reset_input = bool(sys.argv[1])
-
     # Create argument parser
     parser = argparse.ArgumentParser(description="This is main script of server control.")
 
