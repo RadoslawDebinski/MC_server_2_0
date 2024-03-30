@@ -111,7 +111,7 @@ class ManageServer:
                     self.console_interface()
                     if self.server_stopped:
                         if self.reset_app:
-                            run_main_command = ["./restart.sh"]
+                            run_main_command = ["restart.bat"]
                             subprocess.call(run_main_command, shell=True)
                         # wait a moment to make output visible
                         time.sleep(5)
@@ -300,6 +300,8 @@ class ManageServer:
             self.stop_app(update_saves=True)
         elif command.lower() == "reset":
             self.reset_app = True
+            self.send_bot_message(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                                  f"[Server control/INFO]: Server status reset.", send_to_admin=True)
             self.stop_app(update_saves=True)
         elif command.startswith("/s "):
             self.send_server_command(command[3:])
@@ -329,6 +331,8 @@ class ManageServer:
                               f"[Server control/INFO]: Server status stopped.", send_to_admin=True)
         # If yes send world folder to drive
         if update_saves:
+            self.send_bot_message(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                                  f"[Server control/INFO]: Saving to Google Drive.", send_to_admin=True)
             self.save_server_to_drive()
             self.send_bot_message(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
                                   f"[Server control/INFO]: New save made on Google Drive.", send_to_admin=True)
@@ -508,7 +512,7 @@ class ManageServer:
         youngest_folder_date_time = datetime.min
         worlds = []
         for item in self.drive_files_list:
-            if item[4] == "application/zip":
+            if item[4] == "application/zip" or item[4] == "application/x-zip-compressed":
                 if item[1] == SAVE_FILE_NAME:
                     worlds.append(item)
                     self.log_file_message(f"Found folder with name: {item[1]} and date {item[5]}.")
