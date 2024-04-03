@@ -38,6 +38,8 @@ logging.basicConfig(filename=LOG_NAME,
 SERVER_STARTED_RE = r'\[minecraft/DedicatedServer]: Done \((.*?)\)! For help, type "help"'
 TCP_RE = r'url=tcp://(.*?)\n'
 SERVER_STOPPED_PATTERN = "ThreadedAnvilChunkStorage: All dimensions are saved"
+ADMIN_PREFIX = "admin"
+EXTERNAL_STOP_PATTERN = "stop"
 # Ngrok temp log file name
 OUT_NGROK_FILE = "output.log"
 # Timings

@@ -5,7 +5,7 @@ import discord
 import asyncio
 from datetime import datetime
 from sensitive_data import BOT_TOKEN
-from constants import USERS_CHANNEL_NAME, ADMIN_CHANNEL_NAME
+from constants import USERS_CHANNEL_NAME, ADMIN_CHANNEL_NAME, ADMIN_PREFIX
 
 tcp_address = sys.argv[1]
 
@@ -67,13 +67,18 @@ async def on_message(message):
         return
 
     if channel == USERS_CHANNEL_NAME:
-        if user_message.lower() == "hello" or user_message.lower() == "hi":
+        if user_message.lower() in {"hello", "hi"}:
             await message.channel.send(f'Hello {username}.')
             return
         elif user_message.lower() == "ip":
             await message.channel.send(f'Here you are buddy: {tcp_address}')
         elif user_message.lower() == "bye":
             await message.channel.send(f'Bye {username}.')
+    if channel == ADMIN_CHANNEL_NAME:
+        if user_message.lower().startswith(ADMIN_PREFIX):
+            print(f"{ADMIN_CHANNEL_NAME} message: {user_message}")
+        else:
+            await message.channel.send(f'{username} "{user_message}" is unrecognized command.')
 
 # Start the thread to wait for user input
 input_thread = threading.Thread(target=wait_for_user_input)
