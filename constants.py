@@ -39,6 +39,8 @@ SERVER_STARTED_RE = r'\[minecraft/DedicatedServer]: Done \((.*?)\)! For help, ty
 SSH_STARTED_RE = r'\b[\w.-]+:\d+\b'
 TCP_RE = r'url=tcp://(.*?)\n'
 SERVER_STOPPED_PATTERN = "ThreadedAnvilChunkStorage: All dimensions are saved"
+ADMIN_PREFIX = "admin"
+EXTERNAL_STOP_PATTERN = "stop"
 # Timings
 SERVER_STATUS_CHECK_PERIOD_S = 60
 SERVER_START_TIMEOUT_S = 5 * 60
@@ -58,7 +60,6 @@ HELP_MESSAGE = "\n\n" \
 ADMIN_CHANNEL_NAME = "admin_control"
 USERS_CHANNEL_NAME = "bot_chatting"
 # Upload and download variables
-# DIRECTORIES_TO_ZIP = [SAVE_DIR, f"{SERVER_DIR}/whitelist.json", f"{SERVER_DIR}/banned-players.json"]
 DIRECTORIES_TO_ZIP = [SAVE_DIR, CONFIG_DIR, f"{SERVER_DIR}/whitelist.json", f"{SERVER_DIR}/banned-players.json",
                       f"{SERVER_DIR}/server.properties"]
 SAVE_FILE_NAME = "world_save.zip"

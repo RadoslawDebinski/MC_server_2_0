@@ -48,6 +48,7 @@ class ManageServer:
         self.tcp_address_found = False
         self.server_stopped = False
         self.reset_app = False
+        self.external_stop = False
         # Port variable
         self.free_port = None
         self.log_file_message("Searching for free port.")
@@ -235,6 +236,7 @@ class ManageServer:
             print(line_text)
             if line_text.endswith(SERVER_STOPPED_PATTERN):
                 self.server_stopped = True
+                break
 
     def connect_serveo(self):
         """
@@ -268,10 +270,16 @@ class ManageServer:
         self.log_file_message("Starting discord bot subprocess.")
         run_bot_command = ["python3", "discord_bot.py", f"{self.extracted_address}"]
         self.discord_bot_process = subprocess.Popen(run_bot_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        for line in iter(self.discord_bot_process.stdout.readline, b''):
-            print(line)
+        for line in iter(self.discord_bot_process.stdout.readline, ""):
             line_text = line.decode('utf-8')[:-1]
             self.log_file_message(line_text, sent_by_bot=True)
+            if line_text.lower().startswith(ADMIN_PREFIX) and EXTERNAL_STOP_PATTERN in line_text.lower():
+                self.log_file_message("Admin stop command received.")
+                self.send_bot_message(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                                      f"[Server control/INFO]:Admin stop command received.", send_to_admin=True)
+                self.external_stop = True
+                self.stop_app(update_saves=True)
+                break
 
     def console_interface(self):
         """
@@ -324,6 +332,8 @@ class ManageServer:
         # Stop bot
         self.log_file_message("Stopping bot subprocess.")
         self.discord_bot_process.terminate()
+        if self.external_stop:
+            sys.exit()
 
     """
     ****** Send Info To Sub-process Functions ******
