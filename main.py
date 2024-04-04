@@ -272,13 +272,23 @@ class ManageServer:
         self.discord_bot_process = subprocess.Popen(run_bot_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         for line in iter(self.discord_bot_process.stdout.readline, ""):
             line_text = line.decode('utf-8')[:-1]
-            self.log_file_message(line_text, sent_by_bot=True)
+            if not line_text:
+                self.log_file_message(line_text, sent_by_bot=True)
+            if line_text.lower().startswith(ADMIN_PREFIX) and EXTERNAL_SAVE_PATTERN in line_text.lower():
+                self.log_file_message(f"Admin save command received.")
+                self.send_bot_message(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                                      f"[Server control/INFO]:Admin save command received.", send_to_admin=True)
+                self.external_stop = True
+                self.stop_app(update_saves=True)
+                break
             if line_text.lower().startswith(ADMIN_PREFIX) and EXTERNAL_STOP_PATTERN in line_text.lower():
-                self.log_file_message("Admin stop command received.")
+                self.log_file_message(f"Admin stop command received.")
                 self.send_bot_message(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
                                       f"[Server control/INFO]:Admin stop command received.", send_to_admin=True)
                 self.external_stop = True
-                self.stop_app(update_saves=True)
+                self.stop_app()
+                break
+            if self.server_stopped:
                 break
 
     def console_interface(self):
@@ -331,6 +341,7 @@ class ManageServer:
                                   f"[Server control/INFO]: New save made on Google Drive.", send_to_admin=True)
         # Stop bot
         self.log_file_message("Stopping bot subprocess.")
+        self.send_bot_message(DISCORD_BOT_STOP_SIGNAL, send_to_admin=True)
         self.discord_bot_process.terminate()
         if self.external_stop:
             sys.exit()
@@ -358,7 +369,8 @@ class ManageServer:
         :param bot_message: Input message without newline at the end only content. Prefix is a name of channel.
         :return:
         """
-        self.log_file_message(f"Bots message '{bot_message}' redirected.")
+        if not bot_message == DISCORD_BOT_STOP_SIGNAL:
+            self.log_file_message(f"Bots message '{bot_message}' redirected.")
         # Send a command to the subprocess (replace with your actual command)
         if send_to_admin:
             command_to_send = f"{ADMIN_CHANNEL_NAME}{bot_message}\n"
