@@ -16,6 +16,7 @@ import datetime
 # Google stuff
 import pickle
 import zipfile
+import pty
 
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -39,6 +40,7 @@ class ManageServer:
         # Main threads
         self.server_listener_thread = None
         self.discord_bot_thread = None
+        self.m = None
         # Logger set up
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
@@ -269,10 +271,15 @@ class ManageServer:
         # https://www.geeksforgeeks.org/discord-bot-in-python/
         self.log_file_message("Starting discord bot subprocess.")
         run_bot_command = ["python3", "discord_bot.py", f"{self.extracted_address}"]
-        self.discord_bot_process = subprocess.Popen(run_bot_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        for line in iter(self.discord_bot_process.stdout.readline, ""):
-            line_text = line.decode('utf-8')[:-1]
-            if not line_text:
+        self.m,s = (os.fdopen(pipe) for pipe in pty.openpty())
+        self.discord_bot_process = subprocess.Popen(run_bot_command, stdin=subprocess.PIPE,
+                                                                     stdout=s,
+                                                                     stderr=subprocess.STDOUT)
+        s.close()
+        while True:
+            line = self.m.readline()
+            line_text = line
+            if line_text:
                 self.log_file_message(line_text, sent_by_bot=True)
             if line_text.lower().startswith(ADMIN_PREFIX) and EXTERNAL_SAVE_PATTERN in line_text.lower():
                 self.log_file_message(f"Admin save command received.")
@@ -323,7 +330,7 @@ class ManageServer:
         """
         # Disconnect players
         self.log_file_message("Stopping ssh subprocess.")
-        os.system(f"sudo kill {self.ssh_process.pid}")
+        os.system(f"kill {self.ssh_process.pid}")
         # Safely stop server
         self.log_file_message("Stopping server subprocess.")
         self.send_server_command("/stop")
@@ -344,7 +351,7 @@ class ManageServer:
         self.send_bot_message(DISCORD_BOT_STOP_SIGNAL, send_to_admin=True)
         self.discord_bot_process.terminate()
         if self.external_stop:
-            sys.exit()
+            os._exit(0)
 
     """
     ****** Send Info To Sub-process Functions ******

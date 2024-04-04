@@ -1,6 +1,6 @@
 import sys
 import threading
-
+import os
 import discord
 import asyncio
 from datetime import datetime
@@ -46,7 +46,7 @@ def wait_for_user_input():
                 stop_app = True
         channel = discord.utils.get(bot.get_all_channels(), name=channel_name)
         if stop_app:
-            sys.exit()
+            os._exit(0)
         if channel:
             asyncio.run_coroutine_threadsafe(channel.send(user_input), bot.loop)
 
