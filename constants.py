@@ -39,7 +39,9 @@ SERVER_STARTED_RE = r'\[minecraft/DedicatedServer]: Done \((.*?)\)! For help, ty
 TCP_RE = r'url=tcp://(.*?)\n'
 SERVER_STOPPED_PATTERN = "ThreadedAnvilChunkStorage: All dimensions are saved"
 ADMIN_PREFIX = "admin"
-EXTERNAL_STOP_PATTERN = "stop"
+EXTERNAL_SAVE_PATTERN = "save"
+EXTERNAL_STOP_PATTERN = "exit"
+
 # Ngrok temp log file name
 OUT_NGROK_FILE = "output.log"
 # Timings
@@ -60,6 +62,7 @@ HELP_MESSAGE = "\n\n" \
 # Bots working channels
 ADMIN_CHANNEL_NAME = "admin_control"
 USERS_CHANNEL_NAME = "bot_chatting"
+DISCORD_BOT_STOP_SIGNAL = "###DISCORD_BOT_STOP_SIGNAL###"
 # Upload and download variables
 DIRECTORIES_TO_ZIP = [SAVE_DIR, CONFIG_DIR, f"{SERVER_DIR}/whitelist.json", f"{SERVER_DIR}/banned-players.json",
                       f"{SERVER_DIR}/server.properties"]

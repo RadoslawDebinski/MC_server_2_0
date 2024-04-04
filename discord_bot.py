@@ -5,7 +5,7 @@ import discord
 import asyncio
 from datetime import datetime
 from sensitive_data import BOT_TOKEN
-from constants import USERS_CHANNEL_NAME, ADMIN_CHANNEL_NAME, ADMIN_PREFIX
+from constants import USERS_CHANNEL_NAME, ADMIN_CHANNEL_NAME, ADMIN_PREFIX, DISCORD_BOT_STOP_SIGNAL
 
 tcp_address = sys.argv[1]
 
@@ -30,6 +30,7 @@ def wait_for_user_input():
     Redirects info from parent process to specific channel.
     :return:
     """
+    stop_app = False
     while True:
         user_input = input()
         channel_name = USERS_CHANNEL_NAME
@@ -38,7 +39,11 @@ def wait_for_user_input():
         else:
             user_input = user_input.replace(ADMIN_CHANNEL_NAME, "")
             channel_name = ADMIN_CHANNEL_NAME
+            if DISCORD_BOT_STOP_SIGNAL in user_input:
+                stop_app = True
         channel = discord.utils.get(bot.get_all_channels(), name=channel_name)
+        if stop_app:
+            sys.exit()
         if channel:
             asyncio.run_coroutine_threadsafe(channel.send(user_input), bot.loop)
 
