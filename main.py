@@ -24,6 +24,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from constants import *
+from sensitive_data import ZROK_TOKEN
 
 
 class ManageServer:
@@ -35,7 +36,7 @@ class ManageServer:
         """
         # Processes
         self.server_process = None
-        self.ssh_process = None
+        self.zrok_process = None
         self.discord_bot_process = None
         # Main threads
         self.server_listener_thread = None
@@ -105,8 +106,7 @@ class ManageServer:
         self.change_config_port()
         self.run_server()
         if self.server_started:
-            self.connect_serveo()
-
+            self.connect_zrok()
             self.log_file_message("Starting discord bot thread.")
             self.discord_bot_thread = threading.Thread(target=self.run_discord_bot)
             self.discord_bot_thread.start()
@@ -240,27 +240,26 @@ class ManageServer:
                 self.server_stopped = True
                 break
 
-    def connect_serveo(self):
+    def connect_zrok(self):
         """
-        Runs serveo ssh command and saves new ip.
+        Runs zrok process with fixed timeout.
         :return:
         """
-        # https://serveo.net/
-        # Clearing the previous log
-        # run_ssh_command = f"sudo ssh -R {self.free_port}:localhost:{self.free_port} serveo.net"
-        run_ssh_command = ["ssh", "-R", f"{self.free_port}:localhost:{self.free_port}", "serveo.net"]
-        self.log_file_message("Staring serveo subprocess.")
-        self.ssh_process = subprocess.Popen(run_ssh_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        ssh_start_time = time.time()
-        for line in iter(self.ssh_process.stdout.readline, ""):
-            line = line.decode('utf-8', errors='ignore')
+        # https://blog.openziti.io/minecraft-over-zrok
+        run_zrok_command = ["zrok", "share", "reserved", "--headless", ZROK_TOKEN]
+        self.log_file_message("Staring zrok subprocess.")
+        m, s = (os.fdopen(pipe) for pipe in pty.openpty())
+        self.zrok_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=s)
+        zrok_start_time = time.time()
+        while True:
+            line = m.readline()
             print(line)
-            if re.search(SSH_STARTED_RE, line):
-                self.extracted_address = f"{socket.gethostbyname('serveo.net')}:{self.free_port}"
+            if re.search(ZROK_STARTED_RE, line):
+                self.extracted_address = ZROK_TOKEN
                 self.tcp_address_found = True
                 break
-            elif int(time.time() - ssh_start_time) > SSH_START_TIMEOUT_S:
-                self.log_file_message(f"SSH with serveo starting time out exceeded: "
+            elif int(time.time() - zrok_start_time) > ZROK_START_TIMEOUT_S:
+                self.log_file_message(f"Zrok starting time out exceeded: "
                                       f"{SERVER_START_TIMEOUT_S} limit.")
                 break
 
@@ -331,8 +330,8 @@ class ManageServer:
         """
         # Disconnect players
         if self.tcp_address_found:
-            self.log_file_message("Stopping ssh subprocess.")
-            os.system(f"kill {self.ssh_process.pid}")
+            self.log_file_message("Stopping zrok subprocess.")
+            self.zrok_process.terminate()
         # Safely stop server
         self.log_file_message("Stopping server subprocess.")
         self.send_server_command("/stop")

@@ -36,7 +36,7 @@ logging.basicConfig(filename=LOG_NAME,
 
 # Regex pattern mods
 SERVER_STARTED_RE = r'\[minecraft/DedicatedServer]: Done \((.*?)\)! For help, type "help"'
-SSH_STARTED_RE = r'\b[\w.-]+:\d+\b'
+ZROK_STARTED_RE = "Run: started"
 TCP_RE = r'url=tcp://(.*?)\n'
 SERVER_STOPPED_PATTERN = "ThreadedAnvilChunkStorage: All dimensions are saved"
 ADMIN_PREFIX = "admin"
@@ -46,7 +46,7 @@ EXTERNAL_STOP_PATTERN = "exit"
 # Timings
 SERVER_STATUS_CHECK_PERIOD_S = 60
 SERVER_START_TIMEOUT_S = 5 * 60
-SSH_START_TIMEOUT_S = 10
+ZROK_START_TIMEOUT_S = 10
 # Google drive scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
           'https://www.googleapis.com/auth/drive.file']
