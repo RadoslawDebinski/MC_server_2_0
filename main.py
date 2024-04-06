@@ -106,20 +106,20 @@ class ManageServer:
         self.run_server()
         if self.server_started:
             self.connect_serveo()
-            if self.tcp_address_found:
-                self.log_file_message("Starting discord bot thread.")
-                self.discord_bot_thread = threading.Thread(target=self.run_discord_bot)
-                self.discord_bot_thread.start()
-                # Run while true console
-                while True:
-                    self.console_interface()
-                    if self.server_stopped:
-                        if self.reset_app:
-                            run_main_command = ["./restart.sh"]
-                            subprocess.call(run_main_command, shell=True)
-                        # wait a moment to make output visible
-                        time.sleep(5)
-                        break
+
+            self.log_file_message("Starting discord bot thread.")
+            self.discord_bot_thread = threading.Thread(target=self.run_discord_bot)
+            self.discord_bot_thread.start()
+            # Run while true console
+            while True:
+                self.console_interface()
+                if self.server_stopped:
+                    if self.reset_app:
+                        run_main_command = ["./restart.sh"]
+                        subprocess.call(run_main_command, shell=True)
+                    # wait a moment to make output visible
+                    time.sleep(5)
+                    break
 
         else:
             self.log_file_message(f"Server starting time out exceeded: "
@@ -262,6 +262,7 @@ class ManageServer:
             elif int(time.time() - ssh_start_time) > SSH_START_TIMEOUT_S:
                 self.log_file_message(f"SSH with serveo starting time out exceeded: "
                                       f"{SERVER_START_TIMEOUT_S} limit.")
+                break
 
     def run_discord_bot(self):
         """
@@ -329,8 +330,9 @@ class ManageServer:
         :return:
         """
         # Disconnect players
-        self.log_file_message("Stopping ssh subprocess.")
-        os.system(f"kill {self.ssh_process.pid}")
+        if self.tcp_address_found:
+            self.log_file_message("Stopping ssh subprocess.")
+            os.system(f"kill {self.ssh_process.pid}")
         # Safely stop server
         self.log_file_message("Stopping server subprocess.")
         self.send_server_command("/stop")
