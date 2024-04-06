@@ -15,6 +15,7 @@ import datetime
 # Google stuff
 import pickle
 import zipfile
+import pty
 
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -22,6 +23,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from constants import *
+from sensitive_data import ZROK_TOKEN
 
 
 class ManageServer:
@@ -33,11 +35,12 @@ class ManageServer:
         """
         # Processes
         self.server_process = None
-        self.ngrok_process = None
+        self.zrok_process = None
         self.discord_bot_process = None
         # Main threads
         self.server_listener_thread = None
         self.discord_bot_thread = None
+        self.m = None
         # Logger set up
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
@@ -102,21 +105,20 @@ class ManageServer:
         self.change_config_port()
         self.run_server()
         if self.server_started:
-            self.connect_ngrok()
-            if self.tcp_address_found:
-                self.log_file_message("Starting discord bot thread.")
-                self.discord_bot_thread = threading.Thread(target=self.run_discord_bot)
-                self.discord_bot_thread.start()
-                # Run while true console
-                while True:
-                    self.console_interface()
-                    if self.server_stopped:
-                        if self.reset_app:
-                            run_main_command = ["restart.bat"]
-                            subprocess.call(run_main_command, shell=True)
-                        # wait a moment to make output visible
-                        time.sleep(5)
-                        break
+            self.connect_zrok()
+            self.log_file_message("Starting discord bot thread.")
+            self.discord_bot_thread = threading.Thread(target=self.run_discord_bot)
+            self.discord_bot_thread.start()
+            # Run while true console
+            while True:
+                self.console_interface()
+                if self.server_stopped:
+                    if self.reset_app:
+                        run_main_command = ["./restart.sh"]
+                        subprocess.call(run_main_command, shell=True)
+                    # wait a moment to make output visible
+                    time.sleep(5)
+                    break
 
         else:
             self.log_file_message(f"Server starting time out exceeded: "
@@ -237,44 +239,28 @@ class ManageServer:
                 self.server_stopped = True
                 break
 
-    def connect_ngrok(self):
+    def connect_zrok(self):
         """
-        Creates temporary ngrok log file and run its subprocess.
+        Runs zrok process with fixed timeout.
         :return:
         """
-        # https://www.sitepoint.com/use-ngrok-test-local-site/
-        # https://www.endtoend.ai/tutorial/ngrok-ssh-forwarding/
-        os.chdir(NGROK_DIR)
-        # Clearing the previous log
-        self.log_file_message("Clearing ngrok temporary log file.")
-        open(OUT_NGROK_FILE, 'w').close()
-        with open(OUT_NGROK_FILE, "r") as output_file:
-            run_ngrok_command = ["ngrok", "tcp", f"{self.free_port}", "--log", f"{OUT_NGROK_FILE}"]
-            self.log_file_message("Staring ngrok subprocess.")
-            self.ngrok_process = subprocess.Popen(run_ngrok_command, stdout=subprocess.DEVNULL,
-                                                  stderr=subprocess.DEVNULL)
-            self.get_tcp_address(output_file)
-            output_file.close()
-        os.chdir(CURRENT_DIR)
-
-    def get_tcp_address(self, output_file: io.TextIOWrapper) -> None:
-        """
-        Gives few second for ngrok to start connection.
-        Checks its output temporary log file and if found saves it to variable and changes tcp_address_found flag.
-        :param output_file:
-        :return:
-        """
-        # Give ngrok some time for stabilization
-        time.sleep(NGROK_STABILIZATION_TIME_S)
-        log_content = "".join(output_file.readlines())
-        # Search for the TCP_RE pattern in the logs
-        if match := re.search(TCP_RE, log_content):
-            result = match[1]
-            self.log_file_message(f"Extracted server tcp address: {result}")
-            self.extracted_address = result
-            self.tcp_address_found = True
-        else:
-            self.log_file_message("Server tcp address not found.")
+        # https://blog.openziti.io/minecraft-over-zrok
+        run_zrok_command = ["zrok", "share", "reserved", "--headless", ZROK_TOKEN]
+        self.log_file_message("Staring zrok subprocess.")
+        m, s = (os.fdopen(pipe) for pipe in pty.openpty())
+        self.zrok_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=s)
+        zrok_start_time = time.time()
+        while True:
+            line = m.readline()
+            print(line)
+            if re.search(ZROK_STARTED_RE, line):
+                self.extracted_address = ZROK_TOKEN
+                self.tcp_address_found = True
+                break
+            elif int(time.time() - zrok_start_time) > ZROK_START_TIMEOUT_S:
+                self.log_file_message(f"Zrok starting time out exceeded: "
+                                      f"{SERVER_START_TIMEOUT_S} limit.")
+                break
 
     def run_discord_bot(self):
         """
@@ -337,8 +323,9 @@ class ManageServer:
         :return:
         """
         # Disconnect players
-        self.log_file_message("Stopping ngrok subprocess.")
-        self.ngrok_process.terminate()
+        if self.tcp_address_found:
+            self.log_file_message("Stopping zrok subprocess.")
+            self.zrok_process.terminate()
         # Safely stop server
         self.log_file_message("Stopping server subprocess.")
         self.send_server_command("/stop")
@@ -359,7 +346,7 @@ class ManageServer:
         self.send_bot_message(DISCORD_BOT_STOP_SIGNAL, send_to_admin=True)
         self.discord_bot_process.terminate()
         if self.external_stop:
-            sys.exit()
+            os._exit(0)
 
     """
     ****** Send Info To Sub-process Functions ******
