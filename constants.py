@@ -62,6 +62,7 @@ HELP_MESSAGE = "\n\n" \
 ADMIN_CHANNEL_NAME = "admin_control"
 USERS_CHANNEL_NAME = "bot_chatting"
 DISCORD_BOT_STOP_SIGNAL = "###DISCORD_BOT_STOP_SIGNAL###"
+DISCORD_BOT_STOPPING_LISTNER_SIGNAL = "###CALL FOR AMBULANCE###"
 # Upload and download variables
 DIRECTORIES_TO_ZIP = [SAVE_DIR, CONFIG_DIR, f"{SERVER_DIR}/whitelist.json", f"{SERVER_DIR}/banned-players.json",
                       f"{SERVER_DIR}/server.properties"]

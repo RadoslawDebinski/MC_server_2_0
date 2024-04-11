@@ -5,7 +5,7 @@ import discord
 import asyncio
 from datetime import datetime
 from sensitive_data import BOT_TOKEN
-from constants import USERS_CHANNEL_NAME, ADMIN_CHANNEL_NAME, ADMIN_PREFIX, DISCORD_BOT_STOP_SIGNAL
+from constants import USERS_CHANNEL_NAME, ADMIN_CHANNEL_NAME, ADMIN_PREFIX, DISCORD_BOT_STOP_SIGNAL, DISCORD_BOT_STOPPING_LISTNER_SIGNAL
 
 tcp_address = sys.argv[1]
 
@@ -44,6 +44,7 @@ def wait_for_user_input():
             channel_name = ADMIN_CHANNEL_NAME
             if DISCORD_BOT_STOP_SIGNAL in user_input:
                 stop_app = True
+                print(DISCORD_BOT_STOPPING_LISTNER_SIGNAL)
         channel = discord.utils.get(bot.get_all_channels(), name=channel_name)
         if stop_app:
             os._exit(0)

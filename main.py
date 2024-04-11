@@ -249,12 +249,12 @@ class ManageServer:
         run_zrok_command = ["zrok", "share", "reserved", "--headless", ZROK_TOKEN]
         self.log_file_message("Staring zrok subprocess.")
         m, s = (os.fdopen(pipe) for pipe in pty.openpty())
-        self.zrok_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=s)
+        self.zrok_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=s, stderr=s)
         zrok_start_time = time.time()
         while True:
             line = m.readline()
             print(line)
-            if re.search(ZROK_STARTED_RE, line):
+            if ZROK_STARTED_RE in line:
                 self.extracted_address = ZROK_TOKEN
                 self.tcp_address_found = True
                 break
@@ -277,8 +277,9 @@ class ManageServer:
                                                                      stderr=subprocess.STDOUT)
         s.close()
         while True:
-            line = self.m.readline()
-            line_text = line
+            line_text = self.m.readline()
+            if self.server_stopped:
+                break
             if line_text:
                 self.log_file_message(line_text, sent_by_bot=True)
             if line_text.lower().startswith(ADMIN_PREFIX) and EXTERNAL_SAVE_PATTERN in line_text.lower():
@@ -294,8 +295,6 @@ class ManageServer:
                                       f"[Server control/INFO]:Admin stop command received.", send_to_admin=True)
                 self.external_stop = True
                 self.stop_app()
-                break
-            if self.server_stopped:
                 break
 
     def console_interface(self):
@@ -350,7 +349,7 @@ class ManageServer:
         # Stop bot
         self.log_file_message("Stopping bot subprocess.")
         self.send_bot_message(DISCORD_BOT_STOP_SIGNAL, send_to_admin=True)
-        self.discord_bot_process.terminate()
+        # self.discord_bot_process.terminate()
         if self.external_stop:
             os._exit(0)
 
