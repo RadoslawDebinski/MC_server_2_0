@@ -58,13 +58,17 @@ HELP_MESSAGE = "\n\n" \
                "* /s [command] - Sends [command] to server and redirects its output to current console.\n" \
                "* /b [message] - Sends [message] to discord channel for chatting with bot.\n" \
                "* help - Lists possible server control options.\n"
-# Bots working channels
+# Working channels on discord
 ADMIN_CHANNEL_NAME = "admin_control"
 USERS_CHANNEL_NAME = "bot_chatting"
+# Discord constants
 DISCORD_BOT_STOP_SIGNAL = "###DISCORD_BOT_STOP_SIGNAL###"
+BOT_PREFIX = "BOT"
+ZROK_PREFIX = "ZROK"
 # Upload and download variables
 DIRECTORIES_TO_ZIP = [SAVE_DIR, CONFIG_DIR, f"{SERVER_DIR}/whitelist.json", f"{SERVER_DIR}/banned-players.json",
                       f"{SERVER_DIR}/server.properties"]
 SAVE_FILE_NAME = "world_save.zip"
 SAVE_FOLDER_NAME = "world"
+
 

@@ -4,6 +4,7 @@
 import argparse
 import errno
 import io
+import json
 import re
 import shutil
 import socket
@@ -15,7 +16,6 @@ import datetime
 # Google stuff
 import pickle
 import zipfile
-import pty
 
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -40,7 +40,6 @@ class ManageServer:
         # Main threads
         self.server_listener_thread = None
         self.discord_bot_thread = None
-        self.m = None
         # Logger set up
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
@@ -114,7 +113,7 @@ class ManageServer:
                 self.console_interface()
                 if self.server_stopped:
                     if self.reset_app:
-                        run_main_command = ["./restart.sh"]
+                        run_main_command = ["./restart.bat"]
                         subprocess.call(run_main_command, shell=True)
                     # wait a moment to make output visible
                     time.sleep(5)
@@ -163,17 +162,15 @@ class ManageServer:
             server_properties.writelines(l_server_configs)
         server_properties.close()
 
-    def log_file_message(self, message_content: str, sent_by_bot: bool = False) -> None:
+    def log_file_message(self, message_content: str, mess_prefix: str = "INFO") -> None:
         """
         Takes input message and creates communicate with time prefix. Then info is sent to console and logg file.
         :param message_content: String which should be sent.
-        :param sent_by_bot: Set to True to mark it is a bots message.
+        :param mess_prefix: Prefix used before every message after time.
         :return:
         """
-        if sent_by_bot:
-            message = f"[{str(datetime.now()).split(' ')[-1].split('.')[0]}] [Server control/BOT]: {message_content}"
-        else:
-            message = f"[{str(datetime.now()).split(' ')[-1].split('.')[0]}] [Server control/INFO]: {message_content}"
+        message = f"[{str(datetime.now()).split(' ')[-1].split('.')[0]}] [Server control/{mess_prefix}]: " \
+                  f"{message_content}"
         print(message)
         self.logger.info(f"{message}")
 
@@ -246,20 +243,22 @@ class ManageServer:
         """
         # https://blog.openziti.io/minecraft-over-zrok
         run_zrok_command = ["zrok", "share", "reserved", "--headless", ZROK_TOKEN]
-        self.log_file_message("Staring zrok subprocess.")
-        m, s = (os.fdopen(pipe) for pipe in pty.openpty())
-        self.zrok_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=s)
+        self.zrok_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
         zrok_start_time = time.time()
         while True:
-            line = m.readline()
-            print(line)
-            if re.search(ZROK_STARTED_RE, line):
+            line = self.zrok_process.stderr.readline().decode('utf-8')
+            line_dict = {"msg": "default Zrok message"}
+            try:
+                line_dict = json.loads(line)
+            except json.JSONDecodeError as e:
+                print("Error decoding Zrok output line:", e)
+            self.log_file_message(line_dict["msg"], mess_prefix=ZROK_PREFIX)
+            if ZROK_TOKEN in line:
                 self.extracted_address = ZROK_TOKEN
                 self.tcp_address_found = True
                 break
             elif int(time.time() - zrok_start_time) > ZROK_START_TIMEOUT_S:
-                self.log_file_message(f"Zrok starting time out exceeded: "
-                                      f"{SERVER_START_TIMEOUT_S} limit.")
                 break
 
     def run_discord_bot(self):
@@ -274,7 +273,7 @@ class ManageServer:
         for line in iter(self.discord_bot_process.stdout.readline, ""):
             line_text = line.decode('utf-8')[:-2]
             if not line_text:
-                self.log_file_message(line_text, sent_by_bot=True)
+                self.log_file_message(line_text, mess_prefix=BOT_PREFIX)
             if line_text.lower().startswith(ADMIN_PREFIX) and EXTERNAL_SAVE_PATTERN in line_text.lower():
                 self.log_file_message(f"Admin save command received.")
                 self.send_bot_message(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
@@ -346,7 +345,7 @@ class ManageServer:
         self.send_bot_message(DISCORD_BOT_STOP_SIGNAL, send_to_admin=True)
         self.discord_bot_process.terminate()
         if self.external_stop:
-            os._exit(0)
+            sys.exit(0)
 
     """
     ****** Send Info To Sub-process Functions ******
