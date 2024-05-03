@@ -271,18 +271,18 @@ class ManageServer:
         run_bot_command = [PYTHON_DIR, "discord_bot.py", f"{self.extracted_address}"]
         self.discord_bot_process = subprocess.Popen(run_bot_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
         for line in iter(self.discord_bot_process.stdout.readline, ""):
-            line_text = line.decode('utf-8')[:-2]
+            line_text = line.decode('utf-8', errors='ignore')
             if not line_text:
                 self.log_file_message(line_text, mess_prefix=BOT_PREFIX)
             if line_text.lower().startswith(ADMIN_PREFIX) and EXTERNAL_SAVE_PATTERN in line_text.lower():
-                self.log_file_message(f"Admin save command received.")
+                self.log_file_message(f" Admin save command received.")
                 self.send_bot_message(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
                                       f"[Server control/INFO]:Admin save command received.", send_to_admin=True)
                 self.external_stop = True
                 self.stop_app(update_saves=True)
                 break
             if line_text.lower().startswith(ADMIN_PREFIX) and EXTERNAL_STOP_PATTERN in line_text.lower():
-                self.log_file_message(f"Admin stop command received.")
+                self.log_file_message(f" Admin stop command received.")
                 self.send_bot_message(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
                                       f"[Server control/INFO]:Admin stop command received.", send_to_admin=True)
                 self.external_stop = True
