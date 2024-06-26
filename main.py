@@ -230,11 +230,14 @@ class ManageServer:
         :return:
         """
         for line in iter(self.server_process.stdout.readline, b''):
-            line_text = line.decode('utf-8')[:-2]
-            print(line_text)
-            if line_text.endswith(SERVER_STOPPED_PATTERN):
-                self.server_stopped = True
-                break
+            try:
+                line_text = line.decode('utf-8')[:-2]
+                print(line_text)
+                if line_text.endswith(SERVER_STOPPED_PATTERN):
+                    self.server_stopped = True
+                    break
+            except UnicodeDecodeError as exception:
+                self.log_file_message(f"Exception: {exception}. Line from server listener cannot be decoded")
 
     def connect_zrok(self):
         """
@@ -244,7 +247,7 @@ class ManageServer:
         # https://blog.openziti.io/minecraft-over-zrok
         run_zrok_command = ["zrok", "share", "reserved", "--headless", ZROK_TOKEN]
         self.zrok_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
+                                             stderr=subprocess.PIPE)
         zrok_start_time = time.time()
         while True:
             line = self.zrok_process.stderr.readline().decode('utf-8')
