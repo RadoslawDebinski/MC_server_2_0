@@ -12,17 +12,10 @@ LOGS_DIR = f"{CURRENT_DIR}/logs"
 PYTHON_DIR = f"{CURRENT_DIR}/../../python/python"
 SAVE_DIR = f"{SERVER_DIR}/world"
 CONFIG_DIR = f"{SERVER_DIR}/config"
-# Server init configuration
-
-# Run command for vanilla
-# RUN_SERVER_COMMAND = [f"{JAVA_DIR}/java", "-jar",
-#                       "-Xmx5G",  # 5GB RAM for running server
-#                       "-Xms1G",  # 1GB RAM as initial star-up memory
-#                       f"{SERVER_DIR}/server.jar",  # Server instance to be run
-#                       "--nogui"]  # Unable GUI / speed up
+OUT_NGROK_FILE = "output.log"
 
 # Run command mods
-RUN_SERVER_COMMAND = [f"{SERVER_DIR}/run.bat"]  # Unable GUI / speed up
+RUN_SERVER_COMMAND = [f"{SERVER_DIR}/run.bat"]
 
 # Create and configure logger / log file
 NOT_FILE_NAME_SIGNS = ["-", ":", ".", " "]
@@ -47,6 +40,7 @@ EXTERNAL_STOP_PATTERN = "exit"
 SERVER_STATUS_CHECK_PERIOD_S = 60
 SERVER_START_TIMEOUT_S = 5 * 60
 ZROK_START_TIMEOUT_S = 10
+NGROK_STABILIZATION_TIME_S = 3
 # Google drive scopes
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
           'https://www.googleapis.com/auth/drive.file']
@@ -65,6 +59,7 @@ USERS_CHANNEL_NAME = "bot_chatting"
 DISCORD_BOT_STOP_SIGNAL = "###DISCORD_BOT_STOP_SIGNAL###"
 BOT_PREFIX = "BOT"
 ZROK_PREFIX = "ZROK"
+NGROK_PREFIX = "NGROK"
 # Upload and download variables
 DIRECTORIES_TO_ZIP = [SAVE_DIR, CONFIG_DIR, f"{SERVER_DIR}/whitelist.json", f"{SERVER_DIR}/banned-players.json",
                       f"{SERVER_DIR}/server.properties"]

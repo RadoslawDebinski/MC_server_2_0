@@ -35,7 +35,7 @@ class ManageServer:
         """
         # Processes
         self.server_process = None
-        self.zrok_process = None
+        self.tcp_process = None
         self.discord_bot_process = None
         # Main threads
         self.server_listener_thread = None
@@ -44,6 +44,7 @@ class ManageServer:
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
         # Flags
+        self.use_zrok_ngrok = True  # Flag which indicates usage of ZROK [True] or NGROK [False] # TODO set as IN
         self.standard_process = standard_process
         self.server_started = False
         self.tcp_address_found = False
@@ -104,7 +105,7 @@ class ManageServer:
         self.change_config_port()
         self.run_server()
         if self.server_started:
-            self.connect_zrok()
+            self.connect_zrok() if self.use_zrok_ngrok else self.connect_ngrok()
             self.log_file_message("Starting discord bot thread.")
             self.discord_bot_thread = threading.Thread(target=self.run_discord_bot)
             self.discord_bot_thread.start()
@@ -239,6 +240,45 @@ class ManageServer:
             except UnicodeDecodeError as exception:
                 self.log_file_message(f"Exception: {exception}. Line from server listener cannot be decoded")
 
+    def connect_ngrok(self):
+        """
+        Creates temporary ngrok log file and run its subprocess.
+        :return:
+        """
+        # https://www.sitepoint.com/use-ngrok-test-local-site/
+        # https://www.endtoend.ai/tutorial/ngrok-ssh-forwarding/
+        os.chdir(NGROK_DIR)
+        # Clearing the previous log
+        self.log_file_message("Clearing ngrok temporary log file.", mess_prefix=NGROK_PREFIX)
+        open(OUT_NGROK_FILE, 'w').close()
+        with open(OUT_NGROK_FILE, "r") as output_file:
+            run_ngrok_command = ["ngrok", "tcp", f"{self.free_port}", "--log", f"{OUT_NGROK_FILE}"]
+            self.log_file_message("Staring ngrok subprocess.", mess_prefix=NGROK_PREFIX)
+            self.tcp_process = subprocess.Popen(run_ngrok_command, stdout=subprocess.DEVNULL,
+                                                stderr=subprocess.DEVNULL)
+            self.get_tcp_address(output_file)
+            output_file.close()
+        os.chdir(CURRENT_DIR)
+
+    def get_tcp_address(self, output_file: io.TextIOWrapper) -> None:
+        """
+        Gives few second for ngrok to start connection.
+        Checks its output temporary log file and if found saves it to variable and changes tcp_address_found flag.
+        :param output_file:
+        :return:
+        """
+        # Give ngrok some time for stabilization
+        time.sleep(NGROK_STABILIZATION_TIME_S)
+        log_content = "".join(output_file.readlines())
+        # Search for the TCP_RE pattern in the logs
+        if match := re.search(TCP_RE, log_content):
+            result = match[1]
+            self.log_file_message(f"Extracted server tcp address: {result}", mess_prefix=NGROK_PREFIX)
+            self.extracted_address = result
+            self.tcp_address_found = True
+        else:
+            self.log_file_message("Server tcp address not found.", mess_prefix=NGROK_PREFIX)
+
     def connect_zrok(self):
         """
         Runs zrok process with fixed timeout.
@@ -246,11 +286,11 @@ class ManageServer:
         """
         # https://blog.openziti.io/minecraft-over-zrok
         run_zrok_command = ["zrok", "share", "reserved", "--headless", ZROK_TOKEN]
-        self.zrok_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE)
+        self.tcp_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE)
         zrok_start_time = time.time()
         while True:
-            line = self.zrok_process.stderr.readline().decode('utf-8')
+            line = self.tcp_process.stderr.readline().decode('utf-8')
             line_dict = {"msg": "default Zrok message"}
             try:
                 line_dict = json.loads(line)
@@ -326,8 +366,8 @@ class ManageServer:
         """
         # Disconnect players
         if self.tcp_address_found:
-            self.log_file_message("Stopping zrok subprocess.")
-            self.zrok_process.terminate()
+            self.log_file_message("Stopping tcp subprocess.")
+            self.tcp_process.terminate()
         # Safely stop server
         self.log_file_message("Stopping server subprocess.")
         self.send_server_command("/stop")
