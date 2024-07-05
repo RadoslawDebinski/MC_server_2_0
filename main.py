@@ -44,6 +44,7 @@ class ManageServer:
         self.logger = logging.getLogger()
         self.logger.setLevel(logging.DEBUG)
         # Flags
+        self.enable_web = True
         self.use_zrok_ngrok = True  # Flag which indicates usage of ZROK [True] or NGROK [False] # TODO set as IN
         self.standard_process = standard_process
         self.server_started = False
@@ -102,10 +103,11 @@ class ManageServer:
         """
         self.check_credentials()
         self.download_last_save(start_flag)
-        self.change_config_port()
+        # self.change_config_port()
         self.run_server()
         if self.server_started:
-            self.connect_zrok() if self.use_zrok_ngrok else self.connect_ngrok()
+            if self.enable_web:
+                self.connect_zrok() if self.use_zrok_ngrok else self.connect_ngrok()
             self.log_file_message("Starting discord bot thread.")
             self.discord_bot_thread = threading.Thread(target=self.run_discord_bot)
             self.discord_bot_thread.start()
@@ -285,24 +287,66 @@ class ManageServer:
         :return:
         """
         # https://blog.openziti.io/minecraft-over-zrok
-        run_zrok_command = ["zrok", "share", "reserved", "--headless", ZROK_TOKEN]
-        self.tcp_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
+        if self.reserve_zrok_token():
+            run_zrok_command = ["zrok", "share", "reserved", "--headless", ZROK_TOKEN]
+            self.tcp_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE)
+            zrok_start_time = time.time()
+            while True:
+                line = self.tcp_process.stderr.readline().decode('utf-8')
+                line_dict = {"msg": "default Zrok message"}
+                try:
+                    line_dict = json.loads(line)
+                except json.JSONDecodeError as e:
+                    self.log_file_message("Error decoding Zrok output line:", mess_prefix=ZROK_PREFIX)
+                self.log_file_message(line_dict["msg"], mess_prefix=ZROK_PREFIX)
+                if ZROK_TOKEN in line:
+                    self.extracted_address = ZROK_TOKEN
+                    self.tcp_address_found = True
+                    break
+                elif int(time.time() - zrok_start_time) > ZROK_START_TIMEOUT_S:
+                    break
+
+    def reserve_zrok_token(self):
+        # Release Token
+        release_zrok_command = ["zrok", "release", ZROK_TOKEN]
+        zrok_release = subprocess.Popen(release_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
         zrok_start_time = time.time()
         while True:
-            line = self.tcp_process.stderr.readline().decode('utf-8')
+            line = zrok_release.stderr.readline().decode('utf-8')
             line_dict = {"msg": "default Zrok message"}
             try:
                 line_dict = json.loads(line)
+
             except json.JSONDecodeError as e:
-                print("Error decoding Zrok output line:", e)
+                self.log_file_message("Error decoding Zrok output line:", mess_prefix=ZROK_PREFIX)
             self.log_file_message(line_dict["msg"], mess_prefix=ZROK_PREFIX)
-            if ZROK_TOKEN in line:
-                self.extracted_address = ZROK_TOKEN
-                self.tcp_address_found = True
+            if ZROK_TOKEN in line or ZROK_RELEASE_RE in line:
+                self.log_file_message("Token released.", mess_prefix=ZROK_PREFIX)
                 break
             elif int(time.time() - zrok_start_time) > ZROK_START_TIMEOUT_S:
-                break
+                return False
+        # Reserve Token
+        reserve_zrok_command = ["zrok", "reserve", "private", f"127.0.0.1:{self.free_port}", "--backend-mode",
+                                "tcpTunnel", "--unique-name", ZROK_TOKEN]
+        zrok_reserve = subprocess.Popen(reserve_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+        zrok_start_time = time.time()
+        while True:
+            line = zrok_reserve.stderr.readline().decode('utf-8')
+            line_dict = {"msg": "default Zrok message"}
+            try:
+                line_dict = json.loads(line)
+
+            except json.JSONDecodeError as e:
+                self.log_file_message("Error decoding Zrok output line:", mess_prefix=ZROK_PREFIX)
+            self.log_file_message(line_dict["msg"], mess_prefix=ZROK_PREFIX)
+            if ZROK_TOKEN in line:
+                self.log_file_message("Token reserved.", mess_prefix=ZROK_PREFIX)
+                return True
+            elif int(time.time() - zrok_start_time) > ZROK_START_TIMEOUT_S:
+                return False
 
     def run_discord_bot(self):
         """
@@ -365,9 +409,10 @@ class ManageServer:
         :return:
         """
         # Disconnect players
-        if self.tcp_address_found:
-            self.log_file_message("Stopping tcp subprocess.")
-            self.tcp_process.terminate()
+        if self.enable_web:
+            if self.tcp_address_found:
+                self.log_file_message("Stopping tcp subprocess.")
+                self.tcp_process.terminate()
         # Safely stop server
         self.log_file_message("Stopping server subprocess.")
         self.send_server_command("/stop")
