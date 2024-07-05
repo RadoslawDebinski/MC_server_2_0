@@ -7,6 +7,7 @@ CURRENT_DIR = os.getcwd()
 # https://www.oracle.com/java/technologies/downloads/
 JAVA_DIR = f"{CURRENT_DIR}/../../java/jdk-17.0.10/bin"
 SERVER_DIR = f"{CURRENT_DIR}/../../server"
+ZROK_DIR = f"{CURRENT_DIR}/../../zrok"
 NGROK_DIR = f"{CURRENT_DIR}/../../ngrok"
 LOGS_DIR = f"{CURRENT_DIR}/logs"
 PYTHON_DIR = f"{CURRENT_DIR}/../../python/python"

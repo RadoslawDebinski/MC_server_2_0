@@ -288,7 +288,7 @@ class ManageServer:
         """
         # https://blog.openziti.io/minecraft-over-zrok
         if self.reserve_zrok_token():
-            run_zrok_command = ["zrok", "share", "reserved", "--headless", ZROK_TOKEN]
+            run_zrok_command = [f"{ZROK_DIR}/zrok", "share", "reserved", "--headless", ZROK_TOKEN]
             self.tcp_process = subprocess.Popen(run_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                                 stderr=subprocess.PIPE)
             zrok_start_time = time.time()
@@ -309,7 +309,7 @@ class ManageServer:
 
     def reserve_zrok_token(self):
         # Release Token
-        release_zrok_command = ["zrok", "release", ZROK_TOKEN]
+        release_zrok_command = [f"{ZROK_DIR}/zrok", "release", ZROK_TOKEN]
         zrok_release = subprocess.Popen(release_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE)
         zrok_start_time = time.time()
@@ -328,8 +328,8 @@ class ManageServer:
             elif int(time.time() - zrok_start_time) > ZROK_START_TIMEOUT_S:
                 return False
         # Reserve Token
-        reserve_zrok_command = ["zrok", "reserve", "private", f"127.0.0.1:{self.free_port}", "--backend-mode",
-                                "tcpTunnel", "--unique-name", ZROK_TOKEN]
+        reserve_zrok_command = [f"{ZROK_DIR}/zrok", "reserve", "private", f"127.0.0.1:{self.free_port}",
+                                "--backend-mode", "tcpTunnel", "--unique-name", ZROK_TOKEN]
         zrok_reserve = subprocess.Popen(reserve_zrok_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE)
         zrok_start_time = time.time()
